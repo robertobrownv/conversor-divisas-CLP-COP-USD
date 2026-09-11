@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor Cruzado CLP ↔ COP ↔ USD</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            max-width: 550px;
+            width: 100%;
+        }
+        h1 {
+            color: #1a2a3a;
+            font-size: 24px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        p.subtitle {
+            text-align: center;
+            color: #627d98;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .rate-info {
+            background-color: #e6f6ff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #0066cc;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid #b3e0ff;
+        }
+        .currency-box {
+            background-color: #f8fafc;
+            border: 2px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .currency-box:focus-within {
+            border-color: #3b82f6;
+            background-color: #ffffff;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #334155;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            box-sizing: border-box;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        .equivalencias {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+        }
+        .eq-item {
+            font-size: 15px;
+            color: #475569;
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .eq-item strong {
+            color: #0f172a;
+        }
+        .usd-highlight {
+            color: #10b981 !important;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Conversor de Precios Cruzado</h1>
+    <p class="subtitle">Escribe en cualquier moneda para ver sus equivalencias al instante</p>
+    
+    <div id="rates" class="rate-info">Conectando con el mercado de divisas...</div>
+
+    <!-- Bloque Chile -->
+    <div class="currency-box">
+        <label for="clp-input">🇨🇱 Si el precio es en Pesos Chilenos (CLP):</label>
+        <div class="input-container">
+            <input type="number" id="clp-input" placeholder="Ingresa valor en CLP" oninput="convertirDesdeCLP()">
+        </div>
+        <div class="equivalencias">
+            <div class="eq-item">A Dólares: <strong class="usd-highlight" id="clp-a-usd">$ 0.00 USD</strong></div>
+            <div class="eq-item">En Pesos Colombianos: <strong id="clp-a-cop">$ 0 COP</strong></div>
+        </div>
+    </div>
+
+    <!-- Bloque Colombia -->
+    <div class="currency-box">
+        <label for="cop-input">🇨🇴 Si el precio es en Pesos Colombianos (COP):</label>
+        <div class="input-container">
+            <input type="number" id="cop-input" placeholder="Ingresa valor en COP" oninput="convertirDesdeCOP()">
+        </div>
+        <div class="equivalencias">
+            <div class="eq-item">A Dólares: <strong class="usd-highlight" id="cop-a-usd">$ 0.00 USD</strong></div>
+            <div class="eq-item">En Pesos Chilenos: <strong id="cop-a-clp">$ 0 CLP</strong></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables de tasas base con respecto a 1 USD
+    let clpRate = 0;
+    let copRate = 0;
+
+        async function obtenerTasas() {
+        try {
+            // Cambiamos a una API ultra-compatible y libre de restricciones de origen (CORS)
+            const response = await fetch('https://exchangerate-api.com');
+            const data = await response.json();
+            
+            if(data && data.rates) {
+                clpRate = data.rates.CLP; // Cuántos CLP es 1 USD
+                copRate = data.rates.COP; // Cuántos COP es 1 USD
+                
+                document.getElementById('rates').style.backgroundColor = "#e6fffa";
+                document.getElementById('rates').style.color = "#00875a";
+                document.getElementById('rates').style.borderColor = "#b3f5e1";
+                document.getElementById('rates').innerText = 
+                    `🟢 Tasas en vivo: 1 USD = ${clpRate.toFixed(1)} CLP | 1 USD = ${copRate.toFixed(1)} COP`;
+            } else {
+                throw new Error();
+            }
+        } catch (error) {
+            document.getElementById('rates').innerHTML = "⚠️ Usando tasas de respaldo (Sin conexión)";
+            clpRate = 940; 
+            copRate = 4000;
+        }
+    }
+
+
+    // Cuando el usuario escribe en el cuadro de CHILE
+    function convertirDesdeCLP() {
+        const clpInput = parseFloat(document.getElementById('clp-input').value);
+        
+        if (!clpInput || clpInput <= 0) {
+            limpiarCampos();
+            return;
+        }
+
+        // 1. Convertir CLP a USD
+        const usdVal = clpInput / clpRate;
+        // 2. Convertir ese resultado en USD a COP
+        const copVal = usdVal * copRate;
+
+        // Mostrar en la tarjeta de Chile
+        document.getElementById('clp-a-usd').innerText = `$ ${usdVal.toFixed(2)} USD`;
+        document.getElementById('clp-a-cop').innerText = `$ ${Math.round(copVal).toLocaleString('es-CO')} COP`;
+    }
+
+    // Cuando el usuario escribe en el cuadro de COLOMBIA
+    function convertirDesdeCOP() {
+        const copInput = parseFloat(document.getElementById('cop-input').value);
+        
+        if (!copInput || copInput <= 0) {
+            limpiarCampos();
+            return;
+        }
+
+        // 1. Convertir COP a USD
+        const usdVal = copInput / copRate;
+        // 2. Convertir ese resultado en USD a CLP
+        const clpVal = usdVal * clpRate;
+
+        // Mostrar en la tarjeta de Colombia
+        document.getElementById('cop-a-usd').innerText = `$ ${usdVal.toFixed(2)} USD`;
+        document.getElementById('cop-a-clp').innerText = `$ ${Math.round(clpVal).toLocaleString('es-CL')} CLP`;
+    }
+
+    function limpiarCampos() {
+        document.getElementById('clp-a-usd').innerText = "$ 0.00 USD";
+        document.getElementById('clp-a-cop').innerText = "$ 0 COP";
+        document.getElementById('cop-a-usd').innerText = "$ 0.00 USD";
+        document.getElementById('cop-a-clp').innerText = "$ 0 CLP";
+    }
+
+    window.onload = obtenerTasas;
+</script>
+
+</body>
+</html>
